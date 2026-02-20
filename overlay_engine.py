@@ -43,12 +43,41 @@ class OverlayEngine:
 
         return img
 
-    def draw_aura(self, frame, pose_results):
-        """Draws a glowing aura around the user."""
-        if not pose_results or not pose_results.pose_landmarks:
-            return frame
+    def match_lighting(self, src, dst):
+        """Adjusts src image brightness/contrast to match dst ROI."""
+        if dst is None or dst.size == 0 or src is None or src.size == 0:
+            return src
+        src_gray = cv2.cvtColor(src, cv2.COLOR_BGRA2GRAY)
+        dst_gray = cv2.cvtColor(dst, cv2.COLOR_BGR2GRAY)
         
-        # Simple procedural aura: use a blurred version of the silhouette
-        # In a real app, we'd use body segmentation
-        # For now, we'll draw centered circles or highlights
-        return frame
+        src_mean = np.mean(src_gray[src[:, :, 3] > 0])
+        dst_mean = np.mean(dst_gray)
+        
+        if src_mean > 0:
+            ratio = dst_mean / src_mean
+            # Apply gain with limits to avoid extreme distortions
+            gain = np.clip(ratio, 0.5, 1.5)
+            # Apply to BGR channels only
+            matched = src.copy()
+            matched[:, :, :3] = np.clip(src[:, :, :3] * gain, 0, 255).astype(np.uint8)
+            return matched
+        return src
+
+    def perspective_overlay(self, img, overlay, src_pts, dst_pts):
+        """Warps overlay using perspective transform to match body movement."""
+        h, w = img.shape[:2]
+        oh, ow = overlay.shape[:2]
+        
+        # Calculate Homography or Affine depending on point count
+        if len(src_pts) >= 4:
+            M, _ = cv2.findHomography(np.float32(src_pts), np.float32(dst_pts))
+            warped = cv2.warpPerspective(overlay, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0,0))
+        else:
+            M = cv2.getAffineTransform(np.float32(src_pts[:3]), np.float32(dst_pts[:3]))
+            warped = cv2.warpAffine(overlay, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0,0))
+        
+        # Blend
+        alpha = warped[:, :, 3] / 255.0
+        for c in range(3):
+            img[:, :, c] = (alpha * warped[:, :, c] + (1 - alpha) * img[:, :, c]).astype(np.uint8)
+        return img
