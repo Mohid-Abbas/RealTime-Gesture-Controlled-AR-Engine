@@ -1,4 +1,4 @@
-# Project Saiyan AR  
+# Project Saiyan Augmented Reality (AR)  
 ### Real-Time Gesture-Controlled Face Transformation & AR Effects Engine
 
 A high-performance, modular Augmented Reality (AR) engine built in Python that performs real-time gesture recognition, landmark-based face transformation, and cinematic energy effects using computer vision.
