@@ -41,8 +41,9 @@ class GestureEngine:
                     # (Quick swipe detection logic)
                     if (prev_pos[0] < nose_x < hand_center[0]) or (hand_center[0] < nose_x < prev_pos[0]):
                         velocity = calculate_velocity(prev_pos, hand_center, dt)
-                        if velocity > 500: # Velocity threshold
+                        if velocity > 300: # Lowered from 500 for better sensitivity
                             self.swipe_triggered = True
+                            print(f"Swipe detected! Velocity: {int(velocity)}")
 
         # Detect Kamehameha Pose (Hands close together)
         if len(hand_centers) >= 2:

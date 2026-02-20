@@ -1,11 +1,20 @@
-import mediapipe as mp
 import cv2
+try:
+    import mediapipe as mp
+    from mediapipe.python.solutions import face_mesh as mp_face_mesh
+    from mediapipe.python.solutions import drawing_utils as mp_drawing
+    from mediapipe.python.solutions import drawing_styles as mp_drawing_styles
+except ImportError:
+    import mediapipe as mp
+    mp_face_mesh = mp.solutions.face_mesh
+    mp_drawing = mp.solutions.drawing_utils
+    mp_drawing_styles = mp.solutions.drawing_styles
 
 class FaceTracker:
     """MediaPipe Face Mesh integration for 468 landmarks."""
     def __init__(self, static_image_mode=False, max_num_faces=1, refine_landmarks=True, 
                  min_detection_confidence=0.5, min_tracking_confidence=0.5):
-        self.mp_face_mesh = mp.solutions.face_mesh
+        self.mp_face_mesh = mp_face_mesh
         self.face_mesh = self.mp_face_mesh.FaceMesh(
             static_image_mode=static_image_mode,
             max_num_faces=max_num_faces,
@@ -13,8 +22,8 @@ class FaceTracker:
             min_detection_confidence=min_detection_confidence,
             min_tracking_confidence=min_tracking_confidence
         )
-        self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_drawing_styles = mp.solutions.drawing_styles
+        self.mp_drawing = mp_drawing
+        self.mp_drawing_styles = mp_drawing_styles
 
     def process(self, frame):
         """Processes the frame and returns landmarks."""
