@@ -1,35 +1,32 @@
 # Project Saiyan Augmented Reality (AR)  
-### Real-Time Gesture-Controlled Face Transformation & AR Effects Engine
+### Real-Time Gesture-Controlled Super Saiyan Effects & Cinematic Environment
 
-A high-performance, modular Augmented Reality (AR) engine built in Python that performs real-time gesture recognition, landmark-based face transformation, and cinematic energy effects using computer vision.
+A high-performance, modular AR engine built in Python that simulates the power of a Super Saiyan. Features real-time gesture recognition, advanced particle physics, and cinematic environmental effects.
 
 ---
 
 ## 🚀 Overview
 
-Project Saiyan AR is a real-time computer vision system that:
+Project Saiyan AR is an immersive computer vision system that:
 
-- Detects facial landmarks (468-point mesh)
-- Detects and tracks hand gestures
-- Performs geometric face warping
-- Applies seamless blending for realistic transformation
-- Triggers cinematic energy effects based on gestures
-- Runs at real-time frame rates (30+ FPS)
-
-The system is designed with modular architecture and professional-level visual quality.
+- **Super Saiyan Aura**: Real-time silhouette-hugging electric field (body lightning).
+- **Cinematic Kamehameha**: Additive-blended energy sphere with fractal lightning and multi-layer bloom.
+- **Continuous Burst**: Gesture-controlled energy blast that fires as long as your palms stay open.
+- **Living Environment**: Parallax-scrolled backgrounds with flying rocks and dust debris.
+- **Screen Shake (Tremors)**: Realistic camera vibration during energy charge and burst states.
 
 ---
 
 ## ✨ Key Features
 
-- 🔍 Real-time Face Tracking (468 landmarks)
-- 🖐 Real-time Hand Tracking (21 landmarks per hand)
-- 🎭 Landmark-Based Face Transformation Engine
-- 🎬 Smooth Animated Transformation Transitions
-- 💥 Gesture-Triggered Energy Effects (Kamehameha-style)
-- 🧠 State Machine-Based Gesture Recognition
-- ⚡ Real-time Performance Optimized (30–45 FPS)
-- 🧩 Modular and Extensible Architecture
+- 🔍 **Real-time Face & Hand Mesh**: 468 face landmarks and 21 hand landmarks per hand.
+- ⚡ **Advanced Effects Engine**:
+    - Recursive fractal lightning arcs and linear dodge blending.
+    - Atmospheric heat haze and multi-radius Gaussian bloom.
+- 🖐 **Fist-to-Palm Control**: Clench fists to charge, relax palms to unleash a continuous energy burst.
+- 🏔 **Parallax Environment**: Multi-layer mountainous background that moves with 3D depth.
+- 🪨 **Physics-Based Debris**: Rocks and dust that "lift off" the ground as your power levels rise.
+- 🫨 **Dynamic Camera Tremors**: Screen-shake intensity that scales with your energy level.
 
 ---
 
@@ -38,17 +35,16 @@ The system is designed with modular architecture and professional-level visual q
 ```
 Camera Input
 ↓
-Frame Processor
+Frame Processor (Face Mesh + Hands)
 ↓
-Face Tracker ─── Hand Tracker
+Gesture Engine (Fist-to-Palm + Proximity)
 ↓
-Gesture Engine
+Effects Engine (Particles + Lightning + Bloom + Shake)
 ↓
-Face Swap Engine ─── Effects Engine
+Background Engine (Segmentation + Parallax + Video)
 ↓
-Renderer
+Final Composite
 ```
-
 
 ---
 
@@ -58,58 +54,41 @@ Renderer
 - OpenCV
 - MediaPipe
 - NumPy
-- (Optional) PyTorch for AI extensions
 
 ---
 
-## 📂 Project Structure
+## 📂 Project Structure (Core)
 
 ```
 project-saiyan-ar/
 │
-├── main.py
-├── camera.py
-├── face_tracker.py
-├── hand_tracker.py
-├── gesture_engine.py
-├── face_swap_engine.py
-├── effects_engine.py
-├── utils.py
-├── assets/
-│ ├── reference_face.png
-│ ├── energy_effects/
-│
-└── requirements.txt
+├── main.py              # Main execution loop and orchestration
+├── camera.py            # Webcam abstraction
+├── face_tracker.py      # MediaPipe Face Mesh module
+├── hand_tracker.py      # MediaPipe Hands module
+├── gesture_engine.py    # Gesture state machine (Swipe/Fist/Palm)
+├── effects_engine.py    # Cinematic effects (Energy/Rocks/Shake)
+├── background_engine.py # Segmentation & Parallax logic
+├── utils.py             # Math and coordinate utilities
+├── requirements.txt     # Dependency list
+└── assets/              # Texture and video assets
 ```
-
 
 ---
 
-## 🧠 How It Works
+## 🧠 Advanced Gesture Controls
 
-### 1️⃣ Face Tracking
-Uses MediaPipe Face Mesh to extract 468 facial landmarks for precise geometry mapping.
+### 1️⃣ Super Saiyan Transformation
+**Action**: Swipe your hand horizontally across your face.  
+**Effect**: Toggles the Transformation mode. When enabled, your silhouette will glow with electrical arcs!
 
-### 2️⃣ Hand Tracking
-Detects 21 landmarks per hand to analyze gesture positions and velocity.
+### 2️⃣ Energy Charge (The Load)
+**Action**: Bring both hands together and **clench your fists**.  
+**Effect**: A golden energy ball pulses between your hands, rocks start lifting off the ground, and the screen begins to shake.
 
-### 3️⃣ Gesture Recognition
-A frame-based state machine detects:
-
-- Face swipe gesture → triggers transformation
-- Dual-hand energy pose → triggers energy effect
-
-### 4️⃣ Face Transformation Engine
-- Delaunay triangulation
-- Affine transformation per triangle
-- Seamless blending (Poisson blending)
-- Lighting and color correction
-
-### 5️⃣ Effects Engine
-- Particle-based energy ball
-- Additive blending glow
-- Motion blur simulation
-- Animated beam rendering
+### 3️⃣ Continuous Burst (Unleash)
+**Action**: While hands are together, **relax your palms**.  
+**Effect**: Fires a massive, continuous Kamehameha energy blast! Close your fists again to stop the blast.
 
 ---
 
@@ -136,53 +115,11 @@ python main.py
 
 Press q to exit.
 
-### 🎯 Functional Requirements
+---
 
-    - Real-time face detection (<100ms latency)
-    - Real-time hand detection
-    - Gesture-triggered transformation
-    - Seamless face blending
-    - ≥ 30 FPS performance
+## ‍💻 Author
 
-### 📊 Performance Targets
+**Muhammad Mohid Abbas**  
+Computer Vision & AI Enthusiast  
 
-    - Resolution: 720p minimum
-    - Frame Rate: 30–45 FPS
-    - Gesture Detection Accuracy: > 90%
-    - Stable landmark smoothing
-
-### ⚠️ Legal Notice
-
-This project is inspired by anime-style transformations.
-For public deployment or distribution, use original or royalty-free assets.
-Do not use copyrighted characters or artwork without permission.
-
-### 🔮 Future Improvements
-
-    - Multiple transformation modes
-    - Voice-trigger activation
-    - Real-time diffusion style transfer
-    - GPU acceleration (CUDA)
-    - Web deployment (WebRTC)
-    - Mobile port
-    - Unity integration
-
-### 📌 Project Goals
-
-This project demonstrates:
-
-    - Computer Vision
-    - Real-Time Systems
-    - Geometric Image Processing
-    - Human-Computer Interaction
-    - AR Rendering Techniques
-    - Gesture Recognition Architecture
-
-### 👨‍💻 Author
-
-Muhammad Mohid Abbas
-Computer Vision & AI Enthusiast
-
-⭐ If You Like This Project
-
-Give it a star ⭐ and feel free to contribute!
+⭐ If You Like This Project, give it a star!
