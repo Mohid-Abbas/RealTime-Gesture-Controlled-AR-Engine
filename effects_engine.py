@@ -19,7 +19,9 @@ class EffectsEngine:
         self.tick = 0
         self.particles = []
         self.dust_particles = []
+        self.rock_particles = []
         self.burst_timer = 0
+        self.shake_offset = (0, 0)
         # Color Palette: Yellow/Gold/White
         self.color_outer = (20, 150, 255) # Golden yellow in BGR
         self.color_mid = (50, 220, 255)   # Bright yellow
@@ -116,25 +118,41 @@ class EffectsEngine:
         if center is None: return frame
         self.tick += 1
         
-        # 0. Handle Burst Timer
+        # 0. Handle Screen Shake and Burst Timing
         if burst:
-            self.burst_timer = 45 # Start 45-frame blast
+            self.burst_timer = max(self.burst_timer, 10) # Maintain at least 10 frames of burst
         
+        intensity = 0
         if self.burst_timer > 0:
+            intensity = 15 # Strong shake during burst
             frame = self.draw_burst(frame, center)
             # Add scene flash (stronger at start of burst)
-            flash_intensity = (self.burst_timer / 45.0) * 0.5
+            flash_intensity = (self.burst_timer / 10.0) * 0.4
             flash = np.full_like(frame, 255)
             frame = cv2.addWeighted(frame, (1.0 - flash_intensity), flash, flash_intensity, 0)
             self.burst_timer -= 1
-            # Still draw body lightning during burst
+            # When bursting, we skip the normal energy ball drawing
+            # But we update shake_offset
+            self.shake_offset = (random.randint(-intensity, intensity), 
+                                 random.randint(-intensity, intensity))
             return frame
+        
+        # Charging shake
+        if radius > 50:
+            intensity = 3
+        
+        if intensity > 0:
+            self.shake_offset = (random.randint(-intensity, intensity), 
+                                 random.randint(-intensity, intensity))
+        else:
+            self.shake_offset = (0, 0)
 
         h, w = frame.shape[:2]
 
-        # 1. Apply Heat Haze and Dust
+        # 1. Apply Heat Haze, Dust, and Rocks
         frame = self.apply_heat_distortion(frame, center, radius)
         frame = self.draw_dust(frame)
+        frame = self.draw_rocks(frame, center, radius)
         
         # 2. Create a transparent black overlay for additive blending
         effect_layer = np.zeros_like(frame)
@@ -189,3 +207,92 @@ class EffectsEngine:
 
         # 8. Final Additive Merge
         return self.additive_blend(frame, effect_layer)
+    def draw_dust(self, frame):
+        """Draws moving dust/debris across the screen."""
+        if not self.dust_particles:
+            for _ in range(30):
+                self.dust_particles.append({
+                    'pos': [random.randint(0, frame.shape[1]), random.randint(0, frame.shape[0])],
+                    'vel': [random.uniform(-2, -5), random.uniform(-1, 1)], # Moving left
+                    'size': random.randint(1, 3),
+                    'alpha': random.uniform(0.1, 0.4)
+                })
+
+        overlay = frame.copy()
+        for p in self.dust_particles:
+            p['pos'][0] += p['vel'][0]
+            p['pos'][1] += p['vel'][1]
+            if p['pos'][0] < 0: p['pos'][0] = frame.shape[1]
+            if p['pos'][1] < 0: p['pos'][1] = frame.shape[0]
+            if p['pos'][1] > frame.shape[0]: p['pos'][1] = 0
+            
+            cv2.circle(overlay, (int(p['pos'][0]), int(p['pos'][1])), p['size'], (100, 150, 200), -1) # Dust color
+
+        return cv2.addWeighted(frame, 0.6, overlay, 0.4, 0) # Thicker dust
+
+    def draw_rocks(self, frame, center, radius):
+        """Draws flying debris/rocks that lift off the ground."""
+        h, w = frame.shape[:2]
+        # Emit rocks if charging or bursting
+        if radius > 40 and random.random() < 0.2:
+            self.rock_particles.append({
+                'pos': [center[0] + random.randint(-400, 400), h], # Start from bottom
+                'vel': [random.uniform(-1, 1), random.uniform(-5, -15)], # Fly up
+                'size': random.randint(5, 15),
+                'angle': 0,
+                'rot_speed': random.uniform(-10, 10)
+            })
+
+        overlay = frame.copy()
+        for p in self.rock_particles[:]:
+            p['pos'][0] += p['vel'][0]
+            p['pos'][1] += p['vel'][1]
+            p['angle'] += p['rot_speed']
+            
+            if p['pos'][1] < -50:
+                self.rock_particles.remove(p)
+                continue
+            
+            # Draw rock as a simple polygon
+            pts = np.array([
+                [p['pos'][0]-p['size'], p['pos'][1]],
+                [p['pos'][0], p['pos'][1]-p['size']],
+                [p['pos'][0]+p['size'], p['pos'][1]],
+                [p['pos'][0], p['pos'][1]+p['size']]
+            ], np.int32)
+            cv2.fillPoly(overlay, [pts], (40, 60, 80)) # Dark rock color
+
+        return cv2.addWeighted(frame, 0.7, overlay, 0.3, 0)
+
+    def apply_screen_shake(self, frame):
+        """Applies the calculated shake offset to the entire frame."""
+        if self.shake_offset == (0, 0): return frame
+        h, w = frame.shape[:2]
+        matrix = np.float32([[1, 0, self.shake_offset[0]], [0, 1, self.shake_offset[1]]])
+        return cv2.warpAffine(frame, matrix, (w, h))
+
+    def draw_body_lightning(self, frame, mask):
+        """Draws electric arcs crawling around the user's silhouette."""
+        if mask is None: return frame
+        
+        h, w = frame.shape[:2]
+        layer = np.zeros_like(frame)
+        
+        # Find edges of the mask
+        mask_uint8 = (mask * 255).astype(np.uint8)
+        edges = cv2.Canny(mask_uint8, 100, 200)
+        edge_pts = np.argwhere(edges > 0)
+        
+        if len(edge_pts) > 10:
+            for _ in range(5):
+                # Pick two random points on the edge
+                idx1 = random.randint(0, len(edge_pts)-1)
+                idx2 = random.randint(0, len(edge_pts)-1)
+                p1 = (edge_pts[idx1][1], edge_pts[idx1][0])
+                p2 = (edge_pts[idx2][1], edge_pts[idx2][0])
+                
+                # If they are close enough, draw a crawling arc
+                if np.linalg.norm(np.array(p1) - np.array(p2)) < 150:
+                    self.draw_fractal_lightning(layer, p1, p2, (200, 255, 255), 1, noise=15)
+
+        return self.additive_blend(frame, layer)

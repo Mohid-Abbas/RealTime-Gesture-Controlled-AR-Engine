@@ -1,4 +1,5 @@
 import time
+import numpy as np
 from utils import get_hand_center, calculate_velocity
 
 class GestureEngine:
@@ -9,6 +10,7 @@ class GestureEngine:
         self.swipe_triggered = False
         self.energy_triggered = False
         self.burst_triggered = False
+        self.hand_openness = [0, 0] # 0 = Fist, 1 = Palm
         self.last_time = time.time()
         self.tick = 0
 
@@ -32,28 +34,26 @@ class GestureEngine:
             center = get_hand_center(hand_landmarks, width, height)
             hand_centers.append(center)
 
-        # Detect Face Swipe (Hand moving across face)
-        if face_results.multi_face_landmarks and len(hand_centers) > 0:
-            face_landmarks = face_results.multi_face_landmarks[0]
-            # Get face center (nose tip is usually index 1)
-            nose_tip = face_landmarks.landmark[1]
-            nose_x = int(nose_tip.x * width)
-            
-            for i, hand_center in enumerate(hand_centers):
-                prev_pos = self.last_hand_pos[i] if i < len(self.last_hand_pos) else None
-                if prev_pos:
-                    # Check if hand moved horizontally across the nose x-coordinate
-                    # (Quick swipe detection logic)
-                    if (prev_pos[0] < nose_x < hand_center[0]) or (hand_center[0] < nose_x < prev_pos[0]):
-                        velocity = calculate_velocity(prev_pos, hand_center, dt)
-                        if velocity > 300: # Lowered from 500 for better sensitivity
-                            self.swipe_triggered = True
-                            print(f"Swipe detected! Velocity: {int(velocity)}")
-
-        # Detect Kamehameha Pose (Hands close together)
+        # Detect Kamehameha Pose (Hands close together) - CHECK THIS FIRST to block swipes
+        in_kamehameha_zone = False
         if len(hand_centers) >= 2:
             dist = calculate_velocity(hand_centers[0], hand_centers[1], dt=1.0)
-            if dist < 200: # Slightly more lenient distance
+            
+            # Detect Hand Openness (Fist vs Palm)
+            self.hand_openness = []
+            for hl in hand_results.multi_hand_landmarks:
+                p_center = hl.landmark[0]
+                m_tip = hl.landmark[12]
+                tip_dist = np.sqrt((p_center.x - m_tip.x)**2 + (p_center.y - m_tip.y)**2)
+                # Normalize: fist is around 0.1, full palm around 0.3+
+                openness = np.clip((tip_dist - 0.1) / 0.2, 0, 1)
+                self.hand_openness.append(openness)
+            
+            avg_openness = sum(self.hand_openness) / len(self.hand_openness) if self.hand_openness else 0
+
+            # Increased distance threshold to 400 for better stability
+            if dist < 400:
+                in_kamehameha_zone = True
                 self.energy_triggered = True
                 
                 # Calculate current combined hand area
@@ -63,29 +63,37 @@ class GestureEngine:
                     ys = [lm.y for lm in hl.landmark]
                     current_total_area += (max(xs) - min(xs)) * (max(ys) - min(ys))
                 
-                # Initialize base area if it's the first frame hands are together
-                if sum(self.last_hand_areas) == 0:
-                    self.last_hand_areas = [current_total_area, 0] # Use first slot for total base
-                    print(f"Charge Initiated. Base Area: {current_total_area:.4f}")
-                
-                base_area = self.last_hand_areas[0]
-                growth_ratio = current_total_area / base_area if base_area > 0 else 1.0
-                
-                # Debug print for the user
-                if self.tick % 10 == 0:
-                    print(f"Energy Charging... Area Growth: {growth_ratio:.2f}x")
-
-                # If hands grow by 25% relative to when they first met, OR if absolute area is huge (> 10% of frame)
-                # This makes the pose in the user's image trigger the burst much more easily
-                if growth_ratio > 1.25 or current_total_area > 0.12:
+                # Continuous Burst Hysteresis:
+                # Trigger at 0.4, but stay bursting until it drops below 0.25
+                threshold = 0.25 if self.burst_triggered else 0.4
+                if sum(self.last_hand_areas) > 0 and avg_openness > threshold:
                     self.burst_triggered = True
-                    if self.tick % 5 == 0:
-                        print(f"BURST TRIGGERED! Area: {current_total_area:.2f}")
+                
+                # Maintain base area for charge tracking
+                if sum(self.last_hand_areas) == 0 and avg_openness < 0.5:
+                    self.last_hand_areas = [current_total_area, 0]
+                    print(f"Charge Initiated. Base Area: {current_total_area:.4f}")
+
+                if self.tick % 5 == 0:
+                    state = "BURSTING" if self.burst_triggered else "CHARGING"
+                    print(f"SJ Mode: {state} | O: {avg_openness:.2f}")
             else:
-                # Reset base area when hands separate
-                if sum(self.last_hand_areas) > 0:
-                    print("Hands separated. Resetting charge.")
                 self.last_hand_areas = [0, 0]
+
+        # Detect Face Swipe - ONLY if not trying to do a Kamehameha
+        if not in_kamehameha_zone and face_results.multi_face_landmarks and len(hand_centers) > 0:
+            face_landmarks = face_results.multi_face_landmarks[0]
+            nose_tip = face_landmarks.landmark[1]
+            nose_x = int(nose_tip.x * width)
+            
+            for i, hand_center in enumerate(hand_centers):
+                prev_pos = self.last_hand_pos[i] if i < len(self.last_hand_pos) else None
+                if prev_pos:
+                    if (prev_pos[0] < nose_x < hand_center[0]) or (hand_center[0] < nose_x < prev_pos[0]):
+                        velocity = calculate_velocity(prev_pos, hand_center, dt)
+                        if velocity > 300:
+                            self.swipe_triggered = True
+                            print(f"Swipe detected! Velocity: {int(velocity)}")
 
         # Update last positions for velocity next frame
         for i in range(min(len(hand_centers), 2)):

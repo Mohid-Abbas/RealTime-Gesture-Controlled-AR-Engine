@@ -17,27 +17,37 @@ def main():
     effects_engine = EffectsEngine()
     background_engine = BackgroundEngine()
 
+    # Load Power Asset
     power_asset = cv2.imread("assets/cinematic_kamehameha_ball.png", -1)
     if power_asset is None:
         power_asset = cv2.imread("assets/kamehameha effect.png", -1)
+
+    # Load Cinematic Background Layers (Phase 6 & 8)
+    # Priority: Video Background -> Mountain Layers
+    video_bg_path = "assets/saiyan_background.mp4"
+    background_engine.set_video_background(video_bg_path)
     
-    # Load Cinematic Background
-    cinematic_bg = cv2.imread("assets/alien_planet_background_saiyan.png")
-    if cinematic_bg is None:
-        # Create a procedural cinematic space if file missing
-        cinematic_bg = np.zeros((720, 1280, 3), dtype=np.uint8)
-        # Add deep blue/purple nebula gradient
-        for y in range(720):
-            for x in range(1280):
-                cinematic_bg[y, x] = [
-                    int(40 + 20 * np.sin(x/400.0)), # Blue
-                    int(10 + 10 * np.cos(y/200.0)), # Green
-                    int(20 + 20 * np.sin((x+y)/300.0)) # Red
-                ]
-        # Add stars
-        for _ in range(200):
-            sx, sy = np.random.randint(0, 1280), np.random.randint(0, 720)
-            cv2.circle(cinematic_bg, (sx, sy), 1, (255, 255, 255), -1)
+    bg_starfield = cv2.imread("assets/background_stars.png")
+    bg_nebula = cv2.imread("assets/background_nebula.png")
+    
+    if bg_starfield is None or bg_nebula is None:
+        # Create high-quality procedural layers (Mountainous Environment Phase 7)
+        w_bg, h_bg = 1280, 720
+        # Layer 0: Sky/Nebula (Distant)
+        bg_starfield = np.zeros((h_bg, w_bg, 3), dtype=np.uint8)
+        for y in range(h_bg):
+            c = int(20 + 40 * (y / h_bg)) # Gradient
+            bg_starfield[y, :] = (c + 10, c, c) # Dark red/brown sky
+            
+        # Layer 1: Mountains (Closer parallax)
+        bg_nebula = np.zeros((h_bg, w_bg, 3), dtype=np.uint8)
+        # Draw mountain silhouettes
+        for x in range(0, w_bg, 2):
+            m_h = int(200 + 150 * np.sin(x/100.0) + 50 * np.sin(x/25.0))
+            cv2.line(bg_nebula, (x, h_bg), (x, h_bg - m_h), (30, 40, 50), 2)
+        bg_nebula = cv2.GaussianBlur(bg_nebula, (5, 5), 0)
+
+    cinematic_layers = [bg_starfield, bg_nebula]
 
     print("Project Saiyan AR is running. Press 'q' to quit.")
 
@@ -69,9 +79,10 @@ def main():
         is_charging = gesture_engine.is_energy_triggered()
         
         if is_charging or is_bursting:
-            display_frame, body_mask = background_engine.replace_background(display_frame, cinematic_bg)
-            # Add body-hugging lightning
-            display_frame = effects_engine.draw_body_lightning(display_frame, body_mask)
+            # We only need the mask for body lightning now, not replacing the background
+            _, body_mask = background_engine.replace_background(display_frame, background_layers=None)
+            if body_mask is not None:
+                display_frame = effects_engine.draw_body_lightning(display_frame, body_mask)
 
         # Handle Effects (Energy Ball)
         if gesture_engine.is_energy_triggered():
@@ -105,7 +116,10 @@ def main():
         cv2.putText(display_frame, "Push TOWARD Camera to BURST", (10, h - 15), 
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
 
-        # 4. Display
+        # 4. Final Polish (Screen Shake)
+        display_frame = effects_engine.apply_screen_shake(display_frame)
+
+        # 5. Display
         cv2.imshow("Project Saiyan AR", display_frame)
 
         key = cv2.waitKey(1) & 0xFF
