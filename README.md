@@ -97,9 +97,8 @@ project-saiyan-ar/
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/Mohid-Abbas/RealTime-Gesture-Controlled-AR-Engine
-.git
-cd project-saiyan-ar
+git clone https://github.com/Mohid-Abbas/RealTime-Gesture-Controlled-AR-Engine.git
+cd RealTime-Gesture-Controlled-AR-Engine
 ```
 
 ### 2️⃣ Install Dependencies
