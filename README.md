@@ -97,7 +97,8 @@ project-saiyan-ar/
 ### 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/Mohid-Abbas/project-saiyan-ar.git
+git clone https://github.com/Mohid-Abbas/RealTime-Gesture-Controlled-AR-Engine
+.git
 cd project-saiyan-ar
 ```
 
